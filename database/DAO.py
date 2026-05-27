@@ -45,7 +45,7 @@ class DAO():
         conn.close()
         return result
     @staticmethod
-    def getAllEdges(idMap):
+    def getAllEdges(idMap, genreID):
         conn = DBConnect.get_connection()
 
         result = {}
@@ -53,21 +53,24 @@ class DAO():
         cursor = conn.cursor(dictionary=True)
         query = """SELECT distinct(ar.ArtistId) as ArtistId,i.CustomerId as customer ,sum(il.Quantity) as somma
                     from invoiceline il,invoice i, track t, album a, artist ar
-                    where il.InvoiceId=i.InvoiceId and il.TrackId=t.TrackId and t.AlbumId=a.AlbumId amd a.ArtistId=ar.ArtistId
+                    where il.InvoiceId=i.InvoiceId and il.TrackId=t.TrackId 
+                    and t.AlbumId=a.AlbumId and a.ArtistId=ar.ArtistId
+                    and t.GenreId=%s
                     group by  a.ArtistId ,i.CustomerId
                     order by i.CustomerId """
 
-        cursor.execute(query,)
+        cursor.execute(query,(genreID,))
 
         for row in cursor:
             artist_id=row["ArtistId"]
-            customer=row["customer"]
-            quantita=row["somma"]
+            
             if artist_id in idMap:
+                customer=row["customer"]
+                quantita=row["somma"]
                 artist=idMap[artist_id]
                 if artist_id not in result:
-                    result[artist_id]={"artist":artist,"customer":[],"popolarita":0}
-                result[artist_id]["customer"].append(customer)
+                    result[artist_id]={"artist":artist,"customer":set(),"popolarita":0}
+                result[artist_id]["customer"].add(customer)
                 result[artist_id]["popolarita"]+=quantita
 
         cursor.close()
