@@ -59,3 +59,87 @@ class Controller:
     def _choiceDDArtist(self, e):
         self._choiceArtist = e.control.data
         print(f"hai selezionato{self._choiceArtist}")
+
+    #menu a tendina di country come si costruisce:
+    self._choiceCountry=None
+    def fillDDCountry(self):
+        allCountries = self._model.getAllCountries()
+        for c in allCountries:
+            self._view._ddCountry.options.append(
+                ft.dropdown.Option(
+                    key=c,
+                    data=c,
+                    on_click=self._choiceCountryDD
+                )
+            )
+    def _choiceCountryDD(self,e):
+        self._choiceCountry = e.control.data
+
+    #handle percorso della ricorsione
+    def handlePercorso(self,e):
+        percorso = self._model.cercaPercorso()
+        self._view.txt_result.controls.clear()
+        self._view.txt_result.controls.append(
+            ft.Text(
+                f"Lunghezza percorso: {len(percorso)}"
+            )
+        )
+        for c in percorso:
+            self._view.txt_result.controls.append(
+                ft.Text(
+                    f"{c.FirstName} {c.LastName} - {c.spesaTotale}"
+                )
+            )
+        self._view.update_page()
+
+    #menu a tendina mediatype
+    #menu a tendina artista del grafo
+    self._choiceMediaType = None
+    self._choiceArtist = None
+
+    def fillDDMediaType(self):
+        allTypes = self._model.getAllMediaTypes()
+        for t in allTypes:
+            self._view._ddMediaType.options.append(
+                ft.dropdown.Option(
+                    key=t.Name,
+                    data=t,
+                    on_click=self._choiceMediaTypeDD
+                )
+            )
+    def _choiceMediaTypeDD(self,e):
+        self._choiceMediaType = e.control.data
+
+    #questo da aggiungere dopo buildgraph in handle crea grafo
+    self._view._ddArtist.options.clear()
+
+    for a in self._model.getArtists():
+        self._view._ddArtist.options.append(
+            ft.dropdown.Option(
+                key=a.Name,data=a,
+                on_click=self._choiceArtistDD
+                )
+            )
+    #handle percorso per la ricorsione 
+    def handlePercorso(self,e):
+        if self._choiceArtist is None:
+            self._view.create_alert(
+                "Selezionare un artista"
+            )
+            return
+        percorso = self._model.cercaPercorso(
+            self._choiceArtist
+        )
+        self._view.txt_result.controls.clear()
+        self._view.txt_result.controls.append(
+            ft.Text(
+                f"Lunghezza: {len(percorso)}"
+            )
+        )
+        for a in percorso:
+            self._view.txt_result.controls.append(
+                ft.Text(
+                    f"{a.Name} ({a.popolarita})"
+                )
+            )
+        self._view.update_page()

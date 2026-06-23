@@ -76,3 +76,176 @@ class DAO():
         cursor.close()
         conn.close()
         return result
+    
+    #menu a tendina di country
+    @staticmethod
+    def getAllCountries():
+
+        conn = DBConnect.get_connection()
+
+        result = []
+
+        cursor = conn.cursor(dictionary=True)
+
+        query = """
+        SELECT DISTINCT Country
+        FROM Customer
+        ORDER BY Country
+        """
+
+        cursor.execute(query)
+
+        for row in cursor:
+            result.append(row["Country"])
+
+        cursor.close()
+        conn.close()
+
+        return result
+    
+    #I vertici sono i clienti residenti nel paese selezionato. 
+    #bisogna costruire una dataclass di tipo customer
+    @staticmethod
+    def getAllNodes(country):
+
+        conn = DBConnect.get_connection()
+
+        result = []
+
+        cursor = conn.cursor(dictionary=True)
+
+        query = """
+        SELECT c.CustomerId,
+            c.FirstName,
+            c.LastName,
+            c.Country,
+            SUM(i.Total) as spesaTotale
+
+        FROM Customer c
+            LEFT JOIN Invoice i
+            ON c.CustomerId=i.CustomerId
+
+        WHERE c.Country=%s
+
+        GROUP BY c.CustomerId
+        """
+
+        cursor.execute(query,(country,))
+
+        for row in cursor:
+
+            if row["spesaTotale"] is None:
+                row["spesaTotale"]=0
+
+            result.append(Customer(**row))
+
+        cursor.close()
+        conn.close()
+
+        return result
+    
+    #Esiste un arco tra due clienti se hanno acquistato almeno un brano dello stesso artista.
+    @staticmethod
+    def getArtistsByCustomer(idMap,country):
+
+        conn = DBConnect.get_connection()
+
+        result = {}
+
+        cursor = conn.cursor(dictionary=True)
+
+        query = """
+        SELECT c.CustomerId,
+            ar.ArtistId
+
+        FROM Customer c,
+            Invoice i,
+            InvoiceLine il,
+            Track t,
+            Album al,
+            Artist ar
+
+        WHERE c.CustomerId=i.CustomerId
+        AND i.InvoiceId=il.InvoiceId
+        AND il.TrackId=t.TrackId
+        AND t.AlbumId=al.AlbumId
+        AND al.ArtistId=ar.ArtistId
+        AND c.Country=%s
+        """
+
+        cursor.execute(query,(country,))
+
+        for row in cursor:
+
+            customerId=row["CustomerId"]
+
+            if customerId not in result:
+                result[customerId]=set()
+
+            result[customerId].add(row["ArtistId"])
+
+        cursor.close()
+        conn.close()
+
+        return result
+    #menu a tendina organizzato su mediatype, 
+    # costruire una dataclass mediatype
+    @staticmethod
+    def getAllMediaTypes():
+
+        conn = DBConnect.get_connection()
+
+        result = []
+
+        cursor = conn.cursor(dictionary=True)
+
+        query = """
+        SELECT *
+        FROM MediaType
+        ORDER BY Name
+        """
+
+        cursor.execute(query)
+
+        for row in cursor:
+            result.append(MediaType(**row))
+
+        cursor.close()
+        conn.close()
+
+        return result
+    #I vertici sono gli artisti che hanno almeno un brano del media type selezionato.
+    #popolarità di A=(numero totale di brani acquistati)
+    #aggiungere voce popolarità agli artisti
+    @staticmethod
+    def getAllNodes(mediaTypeId):
+        conn = DBConnect.get_connection()
+        result = []
+        cursor = conn.cursor(dictionary=True)
+        query = """
+        SELECT ar.ArtistId,
+            ar.Name,
+            SUM(il.Quantity) as popolarita
+
+        FROM Artist ar,
+            Album al,
+            Track t,
+            MediaType mt,
+            InvoiceLine il
+
+        WHERE ar.ArtistId=al.ArtistId
+        AND al.AlbumId=t.AlbumId
+        AND t.MediaTypeId=mt.MediaTypeId
+        AND il.TrackId=t.TrackId
+        AND mt.MediaTypeId=%s
+
+        GROUP BY ar.ArtistId
+        """
+        cursor.execute(query,(mediaTypeId,))
+        for row in cursor:
+            result.append(
+                Artist(**row)
+            )
+        cursor.close()
+        conn.close()
+        return result
