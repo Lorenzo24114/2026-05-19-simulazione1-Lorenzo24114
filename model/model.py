@@ -178,6 +178,7 @@ class Model:
                 self._allNodes
             )
             self.addEdges()
+    #il peso è la somma delle popolarità dei due artisti.
     def addEdges(self):
             for a,b in itertools.combinations(self._graph.nodes(),r=2):
                 peso = (a.popolarita +b.popolarita)
@@ -259,3 +260,138 @@ class Model:
                         parziale.append(vicino)
                         self.ricorsione(parziale)
                         parziale.pop()
+    #nuovo esercizio con range di prezzi
+    self._graph = nx.Graph()
+    #per menu a tendina
+    def getAllPrices(self):
+        return DAO.getAllPrices()
+    def buildGraph(self,minPrice,maxPrice):
+        self._graph.clear()
+        self._idMapArtist = {}
+        self._allNodes = DAO.getAllNodes(
+            minPrice,
+            maxPrice
+        )
+        for a in self._allNodes:
+            self._idMapArtist[a.ArtistId] = a
+        self._graph.add_nodes_from(
+            self._allNodes
+        )
+        self.addEdges(minPrice,maxPrice)
+    #Il peso è il numero di invoice in cui compaiono insieme.
+    def addEdges(self,minPrice,maxPrice):
+        invoices = DAO.getAllEdges(
+            self._idMapArtist,
+            minPrice,
+            maxPrice
+        )
+        for invoiceId,artisti in invoices.items():
+            if len(artisti) > 1:
+                coppie = itertools.combinations(
+                    artisti,
+                    r=2
+                )
+                for a,b in coppie:
+                    if self._graph.has_edge(a,b):
+                        self._graph[a][b]["weight"] += 1
+                    else:
+                        self._graph.add_edge(
+                            a,
+                            b,
+                            weight=1
+                        )
+    #trovare il cammino semplice di lunghezza massima tale che il peso di ogni arco successivo sia strettamente decrescente.
+    def cercaPercorso(self):
+        self.bestPath = []
+        for nodo in self._graph.nodes():
+            parziale = [nodo]
+            self.ricorsione(parziale)
+        return self.bestPath
+    def ricorsione(self,parziale):
+        if len(parziale) > len(self.bestPath):
+            self.bestPath = list(parziale)
+        ultimo = parziale[-1]
+        for vicino in self._graph.neighbors(
+                ultimo):
+            if vicino not in parziale:
+                pesoNuovo = self._graph[ultimo][vicino]["weight"]
+                if len(parziale) == 1:
+                    parziale.append(vicino)
+                    self.ricorsione(parziale)
+                    parziale.pop()
+                else:
+                    precedente = parziale[-2]
+                    pesoVecchio = self._graph[precedente][ultimo]["weight"]
+                    if pesoNuovo < pesoVecchio:
+                        parziale.append(vicino)
+                        self.ricorsione(parziale)
+                        parziale.pop()
+    #Costruisci un grafo orientato e pesato tra clienti seguiti dall'impiegato selezionato.
+    self._graph = nx.DiGraph()
+    def getAllEmployees(self):
+        return DAO.getAllEmployees()
+    def buildGraph(self,employeeId):
+        self._graph.clear()
+        self._idMapCustomer = {}
+        self._allNodes = DAO.getAllNodes(
+            employeeId
+        )
+        for c in self._allNodes:
+            self._idMapCustomer[c.CustomerId] = c
+        self._graph.add_nodes_from(
+            self._allNodes
+        )
+        self.addEdges()
+    def addEdges(self):
+        for c1,c2 in itertools.combinations(
+                self._graph.nodes(),
+                2):
+            peso = (
+                c1.spesaTotale +
+                c2.spesaTotale
+            )
+            if c1.spesaTotale > c2.spesaTotale:
+                self._graph.add_edge(
+                    c1,
+                    c2,
+                    weight=peso
+                )
+            elif c2.spesaTotale > c1.spesaTotale:
+                self._graph.add_edge(
+                    c2,
+                    c1,
+                    weight=peso
+                )
+            else:
+                self._graph.add_edge(
+                    c1,
+                    c2,
+                    weight=peso
+                )
+                self._graph.add_edge(
+                    c2,
+                    c1,
+                    weight=peso
+                )
+    # per creazione menu a tendina 
+    def getCustomers(self):
+        return sorted(
+            self._graph.nodes(),
+            key=lambda x:x.LastName
+        )
+    def cercaPercorso(self,customer):
+        self.bestPath=[]
+        parziale=[customer]
+        self.ricorsione(parziale)
+        return self.bestPath
+    def ricorsione(self,parziale):
+        if len(parziale) > len(self.bestPath):
+            self.bestPath = list(parziale)
+        ultimo = parziale[-1]
+        for vicino in self._graph.successors(
+                ultimo):
+            if vicino not in parziale:
+                if vicino.nAcquisti < ultimo.nAcquisti:
+                    parziale.append(vicino)
+                    self.ricorsione(parziale)
+                    parziale.pop()

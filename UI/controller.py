@@ -143,3 +143,99 @@ class Controller:
                 )
             )
         self._view.update_page()
+    #menu a tendina da costruire per un range di prezzi
+    self._choiceMin = None
+    self._choiceMax = None
+
+    def fillDDPrices(self):
+        allPrices = self._model.getAllPrices()
+        for p in allPrices:
+            self._view._ddMin.options.append(
+                ft.dropdown.Option(
+                    key=p,
+                    data=p,
+                    on_click=self._choiceMinDD
+                )
+            )
+            self._view._ddMax.options.append(
+                ft.dropdown.Option(
+                    key=p,
+                    data=p,
+                    on_click=self._choiceMaxDD
+                )
+            )
+    def _choiceMinDD(self,e):
+        self._choiceMin = e.control.data
+
+    def _choiceMaxDD(self,e):
+        self._choiceMax = e.control.data
+    #trovare il cammino semplice di lunghezza massima tale che il peso di ogni arco successivo sia strettamente decrescente.
+    def handlePercorso(self,e):
+        percorso = self._model.cercaPercorso()
+        self._view.txt_result.controls.clear()
+        self._view.txt_result.controls.append(
+            ft.Text(
+                f"Lunghezza percorso: {len(percorso)}"
+            )
+        )
+        for a in percorso:
+            self._view.txt_result.controls.append(
+                ft.Text(
+                    f"{a.Name}"
+                )
+            )
+        self._view.update_page()
+    #menu a tendina di employee e customer seguente
+    self._choiceEmployee = None
+    self._choiceCustomer = None
+    def fillDDEmployees(self):
+        allEmployees = self._model.getAllEmployees()
+        for e in allEmployees:
+            self._view._ddEmployee.options.append(
+                ft.dropdown.Option(
+                    key=f"{e.FirstName} {e.LastName}",
+                    data=e,
+                    on_click=self._choiceEmployeeDD
+                )
+            )
+    def _choiceEmployeeDD(self,e):
+        self._choiceEmployee = e.control.data
+    # per costruire il menu a tendina dei costumer dopo aver fatto
+    #build graph bisogna ggiungere questo 
+    self._view._ddCustomer.options.clear()
+
+    for c in self._model.getCustomers():
+
+        self._view._ddCustomer.options.append(
+            ft.dropdown.Option(
+                key=f"{c.FirstName} {c.LastName}",
+                data=c,
+                on_click=self._choiceCustomerDD
+            )
+        )
+    def _choiceCustomerDD(self,e):
+        self._choiceCustomer = e.control.data
+
+    def handlePercorso(self,e):
+        if self._choiceCustomer is None:
+            self._view.create_alert(
+                "Selezionare un cliente"
+            )
+            return
+        percorso = self._model.cercaPercorso(
+            self._choiceCustomer
+        )
+        self._view.txt_result.controls.clear()
+        self._view.txt_result.controls.append(
+            ft.Text(
+                f"Lunghezza percorso: {len(percorso)}"
+            )
+        )
+        for c in percorso:
+            self._view.txt_result.controls.append(
+                ft.Text(
+                    f"{c} - acquisti={c.nAcquisti}"
+                )
+            )
+        self._view.update_page()
+        

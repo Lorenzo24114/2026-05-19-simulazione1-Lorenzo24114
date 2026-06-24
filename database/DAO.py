@@ -249,3 +249,160 @@ class DAO():
         cursor.close()
         conn.close()
         return result
+    #L'utente inserisce un range di prezzo unitario (UnitPrice) tramite due menu a tendina
+    @staticmethod
+    def getAllPrices():
+
+        conn = DBConnect.get_connection()
+
+        result = []
+
+        cursor = conn.cursor(dictionary=True)
+
+        query = """
+        SELECT DISTINCT UnitPrice
+        FROM Track
+        ORDER BY UnitPrice
+        """
+
+        cursor.execute(query)
+
+        for row in cursor:
+            result.append(row["UnitPrice"])
+
+        cursor.close()
+        conn.close()
+
+        return result
+    # I vertici sono gli artisti che hanno almeno un brano con UnitPrice nel range selezionato.
+    @staticmethod
+    def getAllNodes(minPrice,maxPrice):
+
+        conn = DBConnect.get_connection()
+
+        result = []
+
+        cursor = conn.cursor(dictionary=True)
+
+        query = """
+        SELECT DISTINCT ar.*
+
+        FROM Artist ar,
+            Album al,
+            Track t
+
+        WHERE ar.ArtistId=al.ArtistId
+        AND al.AlbumId=t.AlbumId
+        AND t.UnitPrice >= %s
+        AND t.UnitPrice <= %s
+        """
+
+        cursor.execute(query,(minPrice,maxPrice))
+
+        for row in cursor:
+
+            result.append(
+                Artist(**row)
+            )
+
+        cursor.close()
+        conn.close()
+
+        return result
+    #Esiste un arco tra due artisti se almeno un cliente ha acquistato brani di entrambi nella stessa Invoice
+    
+    @staticmethod
+    def getAllEdges(idMap,minPrice,maxPrice):
+        conn = DBConnect.get_connection()
+        result = {}
+        cursor = conn.cursor(dictionary=True)
+        query = """
+        SELECT DISTINCT
+            i.InvoiceId,
+            ar.ArtistId
+
+        FROM Invoice i,
+            InvoiceLine il,
+            Track t,
+            Album al,
+            Artist ar
+
+        WHERE i.InvoiceId=il.InvoiceId
+        AND il.TrackId=t.TrackId
+        AND t.AlbumId=al.AlbumId
+        AND al.ArtistId=ar.ArtistId
+        AND t.UnitPrice >= %s
+        AND t.UnitPrice <= %s
+        """
+        cursor.execute(query,(minPrice,maxPrice))
+        for row in cursor:
+            invoiceId = row["InvoiceId"]
+            artistId = row["ArtistId"]
+            if artistId in idMap:
+                artist = idMap[artistId]
+                if invoiceId not in result:
+                    result[invoiceId] = set()
+                result[invoiceId].add(artist)
+        cursor.close()
+        conn.close()
+        return result
+    #L'utente seleziona un impiegato (Employee, tabella employee) dal menu a tendina 
+    #creare classe employe in questo caso
+    @staticmethod
+    def getAllEmployees():
+        conn = DBConnect.get_connection()
+        result = []
+        cursor = conn.cursor(dictionary=True)
+        query = """
+        SELECT *
+        FROM Employee
+        ORDER BY LastName
+        """
+        cursor.execute(query)
+        for row in cursor:
+            result.append(Employee(**row))
+        cursor.close()
+        conn.close()
+        return result
+    #i vertici saranno i clienti seguiti da quell'impiegato
+    #costruisco la classe costumer aggiungendoci spesa totale e n acquisti
+    @staticmethod
+    def getAllNodes(employeeId):
+
+        conn = DBConnect.get_connection()
+
+        result = []
+
+        cursor = conn.cursor(dictionary=True)
+
+        query = """
+        SELECT c.CustomerId,
+            c.FirstName,
+            c.LastName,
+            c.SupportRepId,
+            SUM(i.Total) as spesaTotale,
+            COUNT(i.InvoiceId) as nAcquisti
+
+        FROM Customer c
+            LEFT JOIN Invoice i
+            ON c.CustomerId=i.CustomerId
+
+        WHERE c.SupportRepId=%s
+
+        GROUP BY c.CustomerId
+        """
+
+        cursor.execute(query,(employeeId,))
+
+        for row in cursor:
+
+            if row["spesaTotale"] is None:
+                row["spesaTotale"]=0
+
+            result.append(Customer(**row))
+
+        cursor.close()
+        conn.close()
+
+        return result
+    
