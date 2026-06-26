@@ -238,4 +238,116 @@ class Controller:
                 )
             )
         self._view.update_page()
-        
+    #L'utente seleziona una città (City) del cliente dal menu a tendina.
+    self._choiceCity=None
+    self._choiceTrack=None
+    def fillDDCity(self):
+        allCities=self._model.getAllCities()
+        for c in allCities:
+            self._view._ddCity.options.append(
+                ft.dropdown.Option(
+                    key=c,
+                    data=c,
+                    on_click=self._choiceDDCity
+                )
+            )
+    def _choiceDDCity(self,e):
+        self._choiceCity=e.control.data
+    
+   #dopo il buildGraph per aggiornare il menu a tendina
+self._view._ddTrack.options.clear()
+
+for t in self._model.getTracks():
+    self._view._ddTrack.options.append(
+        ft.dropdown.Option(key=t.Name,data=t,on_click=self._choiceTrackDD)
+        )
+    def _choiceTrackDD(self,e):
+        self._choiceTrack=e.control.data
+    def handlePercorso(self,e):
+        percorso=self._model.cercaPercorso(
+            self._choiceTrack
+        )
+        self._view.txt_result.controls.clear()
+        self._view.txt_result.controls.append(
+            ft.Text(f"Lunghezza: {len(percorso)}")
+        )
+        for t in percorso:
+            self._view.txt_result.controls.append(
+                ft.Text(
+                    f"{t.Name} - {t.Milliseconds}"
+                )
+            )
+        self._view.update_page()
+    #L'utente seleziona un range di durata (Milliseconds) tramite due menu a tendina 
+    self._choiceMin=None
+    self._choiceMax=None
+    self._choiceAlbum=None
+    def fillDDMinutes(self):
+        allMinutes = self._model.getAllMinutes()
+        for m in allMinutes:
+            self._view._ddMin.options.append(
+                ft.dropdown.Option(
+                    key=m,
+                    data=m,
+                    on_click=self._choiceDDMin
+                )
+            )
+
+        for m in allMinutes:
+            self._view._ddMax.options.append(
+                ft.dropdown.Option(
+                    key=m,
+                    data=m,
+                    on_click=self._choiceDDMax
+                )
+            )
+    
+    def _choiceDDMin(self,e):
+        self._choiceMin = e.control.data
+
+    def _choiceDDMax(self,e):
+        self._choiceMax = e.control.data
+    def handleCreaGrafo(self,e):
+        if self._choiceMin is None or self._choiceMax is None:
+            self._view.create_alert(
+                "Selezionare un range"
+            )
+            return
+        if self._choiceMin > self._choiceMax:
+            self._view.create_alert(
+                "Range non valido"
+            )
+            return
+        self._model.buildGraph(
+            self._choiceMin,
+            self._choiceMax
+        )
+  
+        self._view._ddAlbum.options.clear()
+
+        for a in self._model.getAlbums():
+
+            self._view._ddAlbum.options.append(
+                ft.dropdown.Option(
+                    key=a.Title,
+                    data=a,
+                    on_click=self._choiceAlbumDD
+                )
+            )
+    def _choiceAlbumDD(self,e):
+        self._choiceAlbum = e.control.data
+    def handlePercorso(self,e):
+        percorso=self._model.cercaPercorso(
+            self._choiceAlbum
+        )
+        self._view.txt_result.controls.clear()
+        self._view.txt_result.controls.append(
+            ft.Text(
+                f"Lunghezza: {len(percorso)}"
+            )
+        )
+        for a in percorso:
+            self._view.txt_result.controls.append(
+                ft.Text(a.Title)
+            )
+        self._view.update_page()

@@ -405,4 +405,215 @@ class DAO():
         conn.close()
 
         return result
+    #L'utente seleziona una città (City) del cliente dal menu a tendina.
+    @staticmethod
+    def getAllCities():
+
+        conn = DBConnect.get_connection()
+
+        result=[]
+
+        cursor=conn.cursor(dictionary=True)
+
+        query="""
+        SELECT DISTINCT City
+        FROM Customer
+        ORDER BY City
+        """
+
+        cursor.execute(query)
+
+        for row in cursor:
+            result.append(row["City"])
+
+        cursor.close()
+        conn.close()
+
+        return result
+    #I vertici sono le tracce acquistate da almeno un cliente residente nella città selezionata. 
+    #creare classe track
+    @staticmethod
+    def getAllNodes(city):
+
+        conn=DBConnect.get_connection()
+
+        result=[]
+
+        cursor=conn.cursor(dictionary=True)
+
+        query="""
+        SELECT DISTINCT t.*
+
+        FROM Customer c,
+            Invoice i,
+            InvoiceLine il,
+            Track t
+
+        WHERE c.CustomerId=i.CustomerId
+        AND i.InvoiceId=il.InvoiceId
+        AND il.TrackId=t.TrackId
+        AND c.City=%s
+        """
+
+        cursor.execute(query,(city,))
+
+        for row in cursor:
+
+            result.append(Track(**row))
+
+        cursor.close()
+        conn.close()
+
+        return result
+    #Esiste un arco dalla traccia A alla traccia B se A ha una durata (Milliseconds) maggiore di B (parità → archi in entrambe le direzioni). 
+    @staticmethod
+    def getAllEdges(idMap,city):
+        conn=DBConnect.get_connection()
+        result={}
+        cursor=conn.cursor(dictionary=True)
+        query="""
+        SELECT c.CustomerId,
+            t.TrackId
+
+        FROM Customer c,
+            Invoice i,
+            InvoiceLine il,
+            Track t
+
+        WHERE c.CustomerId=i.CustomerId
+        AND i.InvoiceId=il.InvoiceId
+        AND il.TrackId=t.TrackId
+        AND c.City=%s
+        """
+        cursor.execute(query,(city,))
+        for row in cursor:
+            customer=row["CustomerId"]
+            track=row["TrackId"]
+            if track in idMap:
+                traccia=idMap[track]
+                if customer not in result:
+                    result[customer]=set()
+                result[customer].add(traccia)
+        cursor.close()
+        conn.close()
+        return result
+    #L'utente seleziona un range di durata (Milliseconds) tramite due menu a tendina 
+    @staticmethod
+    def getAllMinutes():
+        conn = DBConnect.get_connection()
+        result = []
+        cursor = conn.cursor(dictionary=True)
+        query = """
+        SELECT DISTINCT ROUND(Milliseconds/60000) as minuti
+        FROM Track
+        ORDER BY minuti
+        """
+        cursor.execute(query)
+        for row in cursor:
+            result.append(row["minuti"])
+        cursor.close()
+        conn.close()
+        return result
+    #I vertici sono gli album che contengono almeno una traccia con durata nel range selezionato.
+    #creare classe album
+    @staticmethod
+    def getAllNodes(minutiMin,minutiMax):
+
+        conn=DBConnect.get_connection()
+
+        result=[]
+
+        cursor=conn.cursor(dictionary=True)
+
+        query="""
+        SELECT DISTINCT a.*
+
+        FROM Album a,
+            Track t
+
+        WHERE a.AlbumId=t.AlbumId
+        AND t.Milliseconds>= %s
+        AND t.Milliseconds<= %s
+        """
+
+        cursor.execute(
+            query,
+            (minutiMin*60000,
+            minutiMax*60000)
+        )
+
+        for row in cursor:
+
+            result.append(
+                Album(**row)
+            )
+
+        cursor.close()
+        conn.close()
+
+        return result
+    #Esiste un arco dall'album A all'album B se A ha più tracce totali di B
+    @staticmethod
+    def getNumeroTracce(idMap):
+        conn=DBConnect.get_connection()
+        result={}
+        cursor=conn.cursor(dictionary=True)
+        query="""
+        SELECT AlbumId,
+            COUNT(*) as numero
+        FROM Track
+        GROUP BY AlbumId
+        """
+        cursor.execute(query)
+        for row in cursor:
+            if row["AlbumId"] in idMap:
+                result[
+                    idMap[row["AlbumId"]]
+                ]=row["numero"]
+        cursor.close()
+        conn.close()
+
+        return result
+    @staticmethod
+    def getAllEdges(idMap,minutiMin,minutiMax):
+        conn=DBConnect.get_connection()
+        result={}
+        cursor=conn.cursor(dictionary=True)
+
+        query="""
+        SELECT DISTINCT
+            c.CustomerId,
+            a.AlbumId
+
+        FROM Customer c,
+            Invoice i,
+            InvoiceLine il,
+            Track t,
+            Album a
+
+        WHERE c.CustomerId=i.CustomerId
+        AND i.InvoiceId=il.InvoiceId
+        AND il.TrackId=t.TrackId
+        AND t.AlbumId=a.AlbumId
+        AND t.Milliseconds>= %s
+        AND t.Milliseconds<= %s
+        """
+        cursor.execute(
+            query,
+            (minutiMin*60000,
+            minutiMax*60000)
+        )
+        for row in cursor:
+            customer=row["CustomerId"]
+            album=row["AlbumId"]
+            if album in idMap:
+                if customer not in result:
+                    result[customer]=set()
+                result[customer].add(
+                    idMap[album]
+                )
+        cursor.close()
+        conn.close()
+
+        return result
     

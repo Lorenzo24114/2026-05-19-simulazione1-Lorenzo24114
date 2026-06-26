@@ -395,3 +395,196 @@ class Model:
                     parziale.append(vicino)
                     self.ricorsione(parziale)
                     parziale.pop()
+    #Costruisci un grafo orientato e pesato tra tracce.
+    self._graph=nx.DiGraph()
+    def getAllCities(self):
+        return DAO.getAllCities()
+     #buildgraph di questo grafo qui con le track
+    def buildGraph(self,city):
+        self._graph.clear()
+        self._idMapTrack={}
+        self._allNodes=DAO.getAllNodes(city)
+        for t in self._allNodes:
+            self._idMapTrack[t.TrackId]=t
+        self._graph.add_nodes_from(self._allNodes)
+        self.addEdges(city)
+    def addEdges(self,city):
+        clienti=DAO.getAllEdges(
+            self._idMapTrack,
+            city
+        )
+        pesi={}
+        for insieme in clienti.values():
+            for t1,t2 in itertools.combinations(
+                    insieme,
+                    2):
+                if t1.Milliseconds > t2.Milliseconds:
+                    key=(t1,t2)
+                elif t2.Milliseconds > t1.Milliseconds:
+                    key=(t2,t1)
+                else:
+                    if (t1,t2) not in pesi:
+                        pesi[(t1,t2)]=0
+                    pesi[(t1,t2)]+=1
+                    if (t2,t1) not in pesi:
+                        pesi[(t2,t1)]=0
+                    pesi[(t2,t1)]+=1
+                    continue
+                if key not in pesi:
+                    pesi[key]=0
+                pesi[key]+=1
+        for (u,v),peso in pesi.items():
+            self._graph.add_edge(
+                u,
+                v,
+                weight=peso
+            )
+    #traccia più influente 
+    def getInfluente(self):
+        best=None
+        bestValue=-1
+        for t in self._graph.nodes():
+            pesoOut=0
+            pesoIn=0
+            for v in self._graph.successors(t):
+                pesoOut+=self._graph[t][v]["weight"]
+            for v in self._graph.predecessors(t):
+                pesoIn+=self._graph[v][t]["weight"]
+            valore=pesoOut-pesoIn
+            if valore>bestValue:
+                best=t
+                bestValue=valore
+        return best,bestValue
+    def getTracks(self):
+        return sorted(
+            self._graph.nodes(),
+            key=lambda x:x.Name
+        )
+    #il cammino semplice di lunghezza massima a partire da quel nodo tale che la durata (Milliseconds) di ogni traccia successiva sia strettamente decrescente.
+    def cercaPercorso(self,track):
+        self.bestPath=[]
+        parziale=[track]
+        self.ricorsione(parziale)
+        return self.bestPath
+    def ricorsione(self,parziale):
+        if len(parziale)>len(self.bestPath):
+            self.bestPath=list(parziale)
+        ultimo=parziale[-1]
+        for vicino in self._graph.successors(ultimo):
+            if vicino not in parziale:
+                if vicino.Milliseconds < ultimo.Milliseconds:
+                    parziale.append(vicino)
+                    self.ricorsione(parziale)
+                    parziale.pop()
+    #L'utente seleziona un range di durata (Milliseconds) tramite due menu a tendina 
+    
+    self._graph = nx.DiGraph()
+    def getAllMinutes(self):
+        return DAO.getAllMinutes()
+    def buildGraph(self,minM,maxM):
+        self._graph.clear()
+        self._idMapAlbum={}
+        self._allNodes=DAO.getAllNodes(
+            minM,maxM
+        )
+
+        for a in self._allNodes:
+            self._idMapAlbum[
+                a.AlbumId
+            ]=a
+        self._graph.add_nodes_from(
+            self._allNodes
+        )
+        self.addEdges(minM,maxM)
+    def addEdges(self,minM,maxM):
+
+        numeroTracce=DAO.getNumeroTracce(
+            self._idMapAlbum
+        )
+
+        clienti=DAO.getAllEdges(
+            self._idMapAlbum,
+            minM,
+            maxM
+        )
+
+        pesi={}
+
+        for albums in clienti.values():
+
+            for a,b in itertools.combinations(
+                    albums,
+                    2):
+
+                if numeroTracce[a]>numeroTracce[b]:
+
+                    key=(a,b)
+
+                elif numeroTracce[b]>numeroTracce[a]:
+
+                    key=(b,a)
+
+                else:
+
+                    for key in [(a,b),(b,a)]:
+
+                        if key not in pesi:
+                            pesi[key]=0
+
+                        pesi[key]+=1
+
+                    continue
+
+                if key not in pesi:
+
+                    pesi[key]=0
+
+                pesi[key]+=1
+
+        for (u,v),peso in pesi.items():
+
+            self._graph.add_edge(
+                u,
+                v,
+                weight=peso
+            )
+
+    def cercaPercorso(self,album):
+
+        self.bestPath=[]
+
+        parziale=[album]
+
+        self.ricorsione(parziale)
+
+        return self.bestPath
+    
+    def ricorsione(self,parziale):
+        if len(parziale)>len(self.bestPath):
+            self.bestPath=list(parziale)
+        ultimo=parziale[-1]
+        for vicino in self._graph.successors(
+                ultimo):
+            if vicino not in parziale:
+                pesoNuovo=self._graph[
+                    ultimo
+                ][
+                    vicino
+                ]["weight"]
+
+                if len(parziale)==1:
+                    parziale.append(vicino)
+                    self.ricorsione(parziale)
+                    parziale.pop()
+                else:
+                    precedente=parziale[-2]
+                    pesoVecchio=self._graph[
+                        precedente
+                    ][
+                        ultimo
+                    ]["weight"]
+                    if pesoNuovo<pesoVecchio:
+                        parziale.append(vicino)
+                        self.ricorsione(parziale)
+                        parziale.pop()
+        
